@@ -103,8 +103,16 @@ public struct WarningControlRegionTree {
   /// Root region representing top-level (file) scope
   private var rootRegionNode: WarningControlRegionNode
 
-  init(range: Range<AbsolutePosition>) {
-    rootRegionNode = WarningControlRegionNode(range: range)
+  /// Inheritance relationships between diagnostic group identifiers
+  /// Key: super-group, Values: sub-groups
+  let subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]]
+
+  init(
+    range: Range<AbsolutePosition>,
+    subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]]
+  ) {
+    self.rootRegionNode = WarningControlRegionNode(range: range)
+    self.subGroupLinks = subGroupLinks
   }
 
   /// Add a warning control region to the tree
@@ -115,7 +123,14 @@ public struct WarningControlRegionTree {
     guard !controls.isEmpty else { return }
     let newNode = WarningControlRegionNode(range: range)
     for (diagnosticGroupIdentifier, control) in controls {
-      newNode.addWarningGroupControl(for: diagnosticGroupIdentifier, control: control)
+      var groups: [DiagnosticGroupIdentifier] = [diagnosticGroupIdentifier]
+      while !groups.isEmpty {
+        let groupIdentifier = groups.removeFirst()
+        newNode.addWarningGroupControl(for: groupIdentifier, control: control)
+        // Ensure we add a corresponding control to each direct and
+        // transitive sub-group of the one specified on this control.
+        groups.append(contentsOf: subGroupLinks[groupIdentifier] ?? [])
+      }
     }
     insertIntoSubtree(newNode, parent: rootRegionNode)
   }

@@ -279,6 +279,30 @@ public class WarningGroupControlTests: XCTestCase {
       ]
     )
   }
+
+  func testSubGroupInheritance() throws {
+    try assertWarningGroupControl(
+      """
+      @warn(SuperGroupID, as: error)
+      func foo() {
+        1️⃣let x = 1
+      }
+      @warn(SuperSuperGroupID, as: ignored)
+      func bar() {
+        2️⃣let x = 1
+      }
+      """,
+      subGroupLinks: [
+        "SuperGroupID": ["GroupID"],
+        "SuperSuperGroupID": ["SuperGroupID"],
+      ],
+      diagnosticGroupID: "GroupID",
+      states: [
+        "1️⃣": .error,
+        "2️⃣": .ignored,
+      ]
+    )
+  }
 }
 
 /// Assert that the various marked positions in the source code have the
@@ -286,6 +310,7 @@ public class WarningGroupControlTests: XCTestCase {
 private func assertWarningGroupControl(
   _ markedSource: String,
   globalControls: [DiagnosticGroupIdentifier: WarningGroupControl] = [:],
+  subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]] = [:],
   diagnosticGroupID: DiagnosticGroupIdentifier,
   states: [String: WarningGroupControl?],
   file: StaticString = #filePath,
@@ -308,10 +333,15 @@ private func assertWarningGroupControl(
       continue
     }
 
-    let warningControlRegions = tree.warningGroupControlRegionTree(globalControls: globalControls)
+    let warningControlRegions = tree.warningGroupControlRegionTree(
+      globalControls: globalControls,
+      subGroupLinks: subGroupLinks
+    )
+
     let groupControl = token.warningGroupControl(
       for: diagnosticGroupID,
-      globalControls: globalControls
+      globalControls: globalControls,
+      subGroupLinks: subGroupLinks
     )
     XCTAssertEqual(groupControl, expectedState)
 

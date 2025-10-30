@@ -27,10 +27,12 @@ extension SyntaxProtocol {
   @_spi(ExperimentalLanguageFeatures)
   public func warningGroupControl(
     for diagnosticGroupIdentifier: DiagnosticGroupIdentifier,
-    globalControls: [DiagnosticGroupIdentifier: WarningGroupControl] = [:]
+    globalControls: [DiagnosticGroupIdentifier: WarningGroupControl] = [:],
+    subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]] = [:]
   ) -> WarningGroupControl? {
     let warningControlRegions = root.warningGroupControlRegionTreeImpl(
       globalControls: globalControls,
+      subGroupLinks: subGroupLinks,
       containing: self.position
     )
     return warningControlRegions.warningGroupControl(at: self.position, for: diagnosticGroupIdentifier)

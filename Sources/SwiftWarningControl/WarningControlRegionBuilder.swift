@@ -16,9 +16,13 @@ import SwiftSyntax
 extension SyntaxProtocol {
   @_spi(ExperimentalLanguageFeatures)
   public func warningGroupControlRegionTree(
-    globalControls: [DiagnosticGroupIdentifier: WarningGroupControl] = [:]
+    globalControls: [DiagnosticGroupIdentifier: WarningGroupControl] = [:],
+    subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]] = [:]
   ) -> WarningControlRegionTree {
-    return warningGroupControlRegionTreeImpl(globalControls: globalControls)
+    return warningGroupControlRegionTreeImpl(
+      globalControls: globalControls,
+      subGroupLinks: subGroupLinks
+    )
   }
 
   /// Implementation of constructing a region tree with an optional parameter
@@ -27,9 +31,10 @@ extension SyntaxProtocol {
   /// queries.
   func warningGroupControlRegionTreeImpl(
     globalControls: [DiagnosticGroupIdentifier: WarningGroupControl],
+    subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]],
     containing position: AbsolutePosition? = nil
   ) -> WarningControlRegionTree {
-    let visitor = WarningControlRegionVisitor(self.range, containing: position)
+    let visitor = WarningControlRegionVisitor(self.range, containing: position, subGroupLinks: subGroupLinks)
     visitor.tree.addWarningGroupControls(range: self.range, controls: globalControls)
     visitor.walk(self)
     return visitor.tree
@@ -53,8 +58,12 @@ private class WarningControlRegionVisitor: SyntaxAnyVisitor {
   var tree: WarningControlRegionTree
   let containingPosition: AbsolutePosition?
 
-  init(_ topLevelRange: Range<AbsolutePosition>, containing position: AbsolutePosition? = nil) {
-    self.tree = WarningControlRegionTree(range: topLevelRange)
+  init(
+    _ topLevelRange: Range<AbsolutePosition>,
+    containing position: AbsolutePosition?,
+    subGroupLinks: [DiagnosticGroupIdentifier: [DiagnosticGroupIdentifier]]
+  ) {
+    self.tree = WarningControlRegionTree(range: topLevelRange, subGroupLinks: subGroupLinks)
     containingPosition = position
     super.init(viewMode: .fixedUp)
   }
